@@ -1,12 +1,26 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, View, Image, Dimensions, TextInput, ActivityIndicator, Alert } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  View,
+  Image,
+  Dimensions,
+  TextInput,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Feather } from '@expo/vector-icons';
 import { AppText } from '../../components/AppText';
 import { colors, radius, shadows, spacing, fontFamilies } from '../../theme';
 import { authService } from '../../services/api/authService';
+import { useAuthStore } from '../../stores/useAuthStore';
+import { ENABLE_SOCIAL_OAUTH } from '../../config/env';
+import { SocialOAuthSection } from './SocialOAuthSection';
 import type { AuthStackParamList } from '../../navigation/AuthStack';
 
 type NavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Welcome'>;
@@ -14,6 +28,8 @@ const { width } = Dimensions.get('window');
 
 export function WelcomeScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const insets = useSafeAreaInsets();
+  const { isLoading: authLoading } = useAuthStore();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,27 +50,36 @@ export function WelcomeScreen() {
         try {
           await authService.sendLoginOtp(email.trim());
           otpSent = true;
-        } catch (e: any) {
-          console.warn('Gửi OTP thất bại, chuyển sang mật khẩu', e);
+        } catch {
+          // fall back to password login
         }
         navigation.navigate('Login', { email: email.trim(), otpSent });
       } else {
         navigation.navigate('Register', { email: email.trim() });
       }
-    } catch (e: any) {
-      setError(e.message || 'Đã xảy ra lỗi khi kiểm tra email');
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Đã xảy ra lỗi khi kiểm tra email');
     } finally {
       setIsLoading(false);
     }
   };
 
+  const busy = isLoading || authLoading;
+
   return (
-    <View style={styles.container}>
-      <LinearGradient
-        colors={[colors.background, colors.surfaceAlt]}
-        style={styles.gradient}
-      >
-        <View style={styles.content}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+    >
+      <LinearGradient colors={[colors.background, colors.surfaceAlt]} style={styles.gradient}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
           <View style={styles.hero}>
             <Image
               source={require('../../../assets/logo_full.png')}
@@ -82,14 +107,14 @@ export function WelcomeScreen() {
                 autoCapitalize="none"
                 value={email}
                 onChangeText={setEmail}
-                editable={!isLoading}
+                editable={!busy}
               />
             </View>
 
             <Pressable
-              style={[styles.btn, styles.btnPrimary, (!email.trim() || isLoading) && styles.btnDisabled]}
+              style={[styles.btn, styles.btnPrimary, (!email.trim() || busy) && styles.btnDisabled]}
               onPress={handleContinue}
-              disabled={!email.trim() || isLoading}
+              disabled={!email.trim() || busy}
             >
               {isLoading ? (
                 <ActivityIndicator color={colors.white} size="small" />
@@ -98,50 +123,34 @@ export function WelcomeScreen() {
               )}
             </Pressable>
 
-            <View style={styles.divider}>
-              <View style={styles.line} />
-              <AppText variant="caption" color="textMuted">HOẶC</AppText>
-              <View style={styles.line} />
-            </View>
-
-            <Pressable style={[styles.btn, styles.btnLinkedin]} onPress={() => Alert.alert('Đang phát triển', 'Đang kết nối API OAuth2 của LinkedIn')}>
-              <Feather name="linkedin" color={colors.white} size={20} />
-              <AppText variant="label" color="white">Đăng nhập bằng LinkedIn</AppText>
-            </Pressable>
-
-            <Pressable style={[styles.btn, styles.btnGoogle]} onPress={() => Alert.alert('Đang phát triển', 'Đang kết nối API OAuth2 của Google')}>
-              <Feather name="mail" color={colors.textPrimary} size={20} />
-              <AppText variant="label" color="textPrimary">Đăng nhập bằng Google</AppText>
-            </Pressable>
+            {ENABLE_SOCIAL_OAUTH ? (
+              <SocialOAuthSection busy={busy} onError={setError} />
+            ) : null}
           </View>
-        </View>
+        </ScrollView>
       </LinearGradient>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  gradient: {
-    flex: 1,
-    paddingTop: 60,
-    paddingBottom: 40,
+  gradient: { flex: 1 },
+  scrollContent: {
+    flexGrow: 1,
+    paddingTop: spacing['3xl'],
+    paddingBottom: spacing['3xl'],
     paddingHorizontal: spacing.lg,
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
+    gap: spacing['2xl'],
   },
   hero: {
-    marginTop: spacing['3xl'],
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
+    minHeight: 120,
+    marginTop: spacing.xl,
   },
-  logo: {
-    width: width * 0.65,
-    height: 90,
-  },
+  logo: { width: width * 0.65, height: 90 },
   actionCard: {
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
@@ -151,10 +160,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.03)',
   },
-  cardTitle: {
-    textAlign: 'center',
-    marginBottom: spacing.xs,
-  },
+  cardTitle: { textAlign: 'center', marginBottom: spacing.xs },
   errorBox: {
     padding: spacing.sm,
     backgroundColor: '#FEE2E2',
@@ -162,9 +168,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FCA5A5',
   },
-  inputGroup: {
-    gap: spacing.xs,
-  },
+  inputGroup: { gap: spacing.xs },
   label: {
     textTransform: 'uppercase',
     fontFamily: fontFamilies.display,
@@ -190,30 +194,6 @@ const styles = StyleSheet.create({
     height: 52,
     borderRadius: radius.pill,
   },
-  btnPrimary: {
-    backgroundColor: colors.primary,
-    ...shadows.md,
-  },
-  btnLinkedin: {
-    backgroundColor: '#0077B5',
-  },
-  btnGoogle: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  btnDisabled: {
-    opacity: 0.5,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    marginVertical: spacing.xs,
-  },
-  line: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.border,
-  },
+  btnPrimary: { backgroundColor: colors.primary, ...shadows.md },
+  btnDisabled: { opacity: 0.5 },
 });

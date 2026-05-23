@@ -1,15 +1,20 @@
 import React from 'react';
-import { Pressable, StyleProp, StyleSheet, TextStyle, ViewStyle } from 'react-native';
+import { Pressable, StyleProp, StyleSheet, TextStyle, View, ViewStyle } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { AppText } from './AppText';
 import { colors, radius, shadows, spacing, typography } from '../theme';
+
+type FeatherIconName = React.ComponentProps<typeof Feather>['name'];
 
 interface PrimaryButtonProps {
   title: string;
   onPress?: () => void;
-  variant?: 'primary' | 'ghost';
+  variant?: 'primary' | 'outline' | 'ghost';
   style?: StyleProp<ViewStyle>;
   textStyle?: StyleProp<TextStyle>;
   disabled?: boolean;
+  leftIcon?: FeatherIconName;
+  compact?: boolean;
 }
 
 export function PrimaryButton({
@@ -19,42 +24,77 @@ export function PrimaryButton({
   style,
   textStyle,
   disabled,
+  leftIcon,
+  compact,
 }: PrimaryButtonProps) {
+  const isOutline = variant === 'outline';
   const isGhost = variant === 'ghost';
+
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
       style={({ pressed }) => [
         styles.base,
-        isGhost ? styles.ghost : styles.primary,
+        compact && styles.compact,
+        isGhost ? styles.ghost : isOutline ? styles.outline : styles.primary,
         pressed && styles.pressed,
         disabled && styles.disabled,
         style,
       ]}
     >
-      <AppText
-        variant="label"
-        color={isGhost ? 'primary' : 'white'}
-        style={[styles.text, textStyle]}
-      >
-        {title}
-      </AppText>
+      <View style={styles.inner}>
+        {leftIcon ? (
+          <Feather
+            name={leftIcon}
+            size={18}
+            color={isOutline || isGhost ? colors.primaryDark : colors.white}
+            style={{ marginRight: spacing.sm }}
+          />
+        ) : null}
+        <AppText
+          variant="label"
+          color={isOutline || isGhost ? 'textPrimary' : 'white'}
+          style={[
+            styles.text,
+            isOutline && styles.outlineText,
+            isGhost && styles.ghostText,
+            textStyle,
+          ]}
+        >
+          {title}
+        </AppText>
+      </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   base: {
+    minHeight: 48,
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing['2xl'],
-    borderRadius: radius.pill,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compact: {
+    minHeight: 44,
+    paddingVertical: spacing.sm,
+  },
+  inner: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   primary: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.primaryDark,
     ...shadows.md,
+  },
+  outline: {
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.primaryDark,
   },
   ghost: {
     backgroundColor: colors.primarySoft,
@@ -62,8 +102,15 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
   },
   text: {
-    textTransform: 'uppercase',
+    textTransform: 'none',
     ...typography.label,
+    fontWeight: '700',
+  },
+  outlineText: {
+    color: colors.primaryDark,
+  },
+  ghostText: {
+    color: colors.primaryDark,
   },
   pressed: {
     opacity: 0.9,

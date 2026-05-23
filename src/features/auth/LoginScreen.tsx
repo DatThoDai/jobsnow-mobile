@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, TextInput, ActivityIndicator, Pressable, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
@@ -18,6 +19,7 @@ type LoginStep = 'login-otp' | 'login-password';
 
 export function LoginScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const insets = useSafeAreaInsets();
   const route = useRoute<LoginRoute>();
   const email = route.params.email;
   const otpSent = route.params.otpSent ?? false;
@@ -101,9 +103,18 @@ export function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+    >
       <LinearGradient colors={[colors.background, colors.surfaceAlt]} style={styles.gradient}>
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
           
           <Pressable onPress={() => navigation.goBack()} style={styles.backBtn}>
             <Feather name="arrow-left" color={colors.textPrimary} size={24} />
@@ -223,16 +234,19 @@ export function LoginScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   gradient: { flex: 1 },
-  scroll: { flexGrow: 1, paddingHorizontal: spacing.lg },
+  scroll: {
+    flexGrow: 1,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing['3xl'],
+  },
   backBtn: {
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: colors.surface,
     alignItems: 'center', justifyContent: 'center',
-    ...shadows.sm, marginTop: 60, marginBottom: spacing.xl,
+    ...shadows.sm, marginTop: spacing.xl, marginBottom: spacing.xl,
   },
   centeredContent: {
-    flex: 1, justifyContent: 'center',
-    paddingBottom: 60,
+    paddingVertical: spacing.lg,
   },
   header: { alignItems: 'center', marginBottom: spacing['2xl'] },
   logoBadge: {

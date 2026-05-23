@@ -7,24 +7,40 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "scheme": "jobsnowapp",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.baocoder.jobsnowapp"
     },
     "android": {
+      "package": "com.baocoder.jobsnowapp",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
+      "softwareKeyboardLayoutMode": "resize",
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "apiBaseUrl": "https://jobsnow.onrender.com",
+      "publicSiteUrl": "https://jobsnow.id.vn",
+      "googleAndroidClientId": "845327823984-1n5aasoni0f5etr1bpaevi8ikdhugblf.apps.googleusercontent.com",
+      "googleWebClientId": "845327823984-6vib4okamlkhbncnmt2oa8rftq7cmb32.apps.googleusercontent.com",
+      "googleIosClientId": "411951560299-2c4bn3josu0j2353h96vlmdbvqg0h32i.apps.googleusercontent.com",
+      "linkedinClientId": "77s5cypf8qx8zo",
+      "linkedinRedirectUri": "https://jobsnow.id.vn/callbacks",
+      "eas": {
+        "projectId": "35b63fae-011d-46c3-b744-141f2c46a583"
+      }
     }
   }
 }

@@ -83,6 +83,19 @@ export interface Notification {
   createdAt: string;
 }
 
+export interface ProfileSkill {
+  skillId: number;
+  skillName?: string;
+  level?: string;
+  yearsOfExperience?: number | null;
+}
+
+export interface ProfileSocialLink {
+  platform: string;
+  url: string;
+  logoUrl?: string;
+}
+
 export interface JobSeekerProfile {
   profileId: number;
   fullName: string;
@@ -91,9 +104,12 @@ export interface JobSeekerProfile {
   avatar: string;
   bio?: string;
   address?: string;
+  title?: string;
+  headline?: string;
   dateOfBirth?: string;
   gender?: string;
-  skills?: any[];
+  skills?: ProfileSkill[];
+  socials?: ProfileSocialLink[];
 }
 
 export interface Company {
@@ -125,9 +141,13 @@ export interface CompanyReview {
 export interface Resume {
   resumeId: number;
   title: string;
+  resumeName?: string;
   summary?: string;
   isPrimary?: boolean;
   fileUrl?: string;
+  resumeUrl?: string;
+  hasParsedCv?: boolean;
+  templateKey?: string;
   createdAt?: string;
 }
 
@@ -216,8 +236,15 @@ export interface ChatMessage {
     filePath: string;
     fileType: string;
   };
+  sentAt?: string;
   createdAt: string;
   isRead: boolean;
+}
+
+export interface ChatMessagesPage {
+  messages: ChatMessage[];
+  hasMore: boolean;
+  oldestMessageId: number | null;
 }
 
 export interface JobCategory {

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { StyleSheet, View, FlatList, ActivityIndicator, Pressable, TextInput, KeyboardAvoidingView, Platform, Image, Alert, Modal, TouchableOpacity } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppText } from '../../components/AppText';
 import { Avatar } from '../../components/Avatar';
@@ -10,12 +11,19 @@ import { chatService } from '../../services/api/chatService';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { ChatMessage } from '../../services/api/models';
 import { RootStackParamList } from '../../navigation/RootNavigator';
+import {
+  CHAT_MESSAGE_PAGE_SIZE,
+  mergeChatMessages,
+  normalizeChatMessage,
+  toInvertedList,
+} from '../../utils/chatMessage';
 
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { API_BASE_URL } from '../../config/env';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 type RouteProps = RouteProp<RootStackParamList, 'Chat'>;
 
@@ -27,39 +35,96 @@ if (typeof (global as any).location === 'undefined') {
 export function ChatScreen() {
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [oldestMessageId, setOldestMessageId] = useState<number | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [text, setText] = useState('');
   const [viewerImage, setViewerImage] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const stompClientRef = useRef<Client | null>(null);
 
+  const messageTimestamp = (m: ChatMessage) => m.sentAt || m.createdAt;
+
+  const loadInitialMessages = async () => {
+    const page = await chatService.getMessagesPage(
+      route.params.conversationId,
+      undefined,
+      CHAT_MESSAGE_PAGE_SIZE,
+    );
+    const normalized = page.messages.map((m) => normalizeChatMessage(m as Partial<ChatMessage> & Record<string, unknown>));
+    setMessages(toInvertedList(normalized));
+    setHasMore(page.hasMore);
+    setOldestMessageId(page.oldestMessageId);
+    setLoadError(null);
+  };
+
+  const loadOlderMessages = async () => {
+    if (isLoadingOlder || !hasMore || oldestMessageId == null) return;
+    setIsLoadingOlder(true);
+    try {
+      const page = await chatService.getMessagesPage(
+        route.params.conversationId,
+        oldestMessageId,
+        CHAT_MESSAGE_PAGE_SIZE,
+      );
+      const normalized = page.messages.map((m) => normalizeChatMessage(m as Partial<ChatMessage> & Record<string, unknown>));
+      setMessages((prev) => mergeChatMessages(prev, normalized));
+      setHasMore(page.hasMore);
+      setOldestMessageId(page.oldestMessageId);
+    } catch (e) {
+      console.warn('loadOlderMessages', e);
+    } finally {
+      setIsLoadingOlder(false);
+    }
+  };
+
   useEffect(() => {
+    setMessages([]);
+    setHasMore(false);
+    setOldestMessageId(null);
+    setLoadError(null);
+    setIsLoading(true);
+
     const load = async () => {
       try {
-        const data = await chatService.getMessages(route.params.conversationId);
-        setMessages((data || []).reverse());
-      } catch (e) {} finally { setIsLoading(false); }
+        await loadInitialMessages();
+      } catch (e) {
+        console.warn('loadInitialMessages', e);
+        const msg = getApiErrorMessage(e, 'Không thể tải tin nhắn');
+        setLoadError(msg);
+        Alert.alert('Lỗi', msg);
+      } finally {
+        setIsLoading(false);
+      }
     };
     load();
 
     // Connect WebSocket
+    const wsUrl = API_BASE_URL.replace(/^http/, 'ws') + '/ws';
     const client = new Client({
-      brokerURL: `${API_BASE_URL.replace('http', 'ws')}/ws`,
       webSocketFactory: () => new SockJS(`${API_BASE_URL}/ws`),
+      reconnectDelay: 5000,
+      heartbeatIncoming: 10000,
+      heartbeatOutgoing: 10000,
       onConnect: () => {
         client.subscribe(`/topic/conversation/${route.params.conversationId}`, (message) => {
-          const newMessage = JSON.parse(message.body);
-          setMessages((prev) => {
-            // Check if message already exists to avoid duplicates
-            if (prev.find(m => m.messageId === newMessage.messageId)) return prev;
-            return [newMessage, ...prev];
-          });
+          try {
+            const newMessage = normalizeChatMessage(JSON.parse(message.body));
+            setMessages((prev) => mergeChatMessages(prev, [newMessage]));
+          } catch {
+            // ignore malformed payloads
+          }
         });
       },
-      debug: (str) => console.log(str),
+      onStompError: (frame) => {
+        console.warn('STOMP error', frame.headers?.message, wsUrl);
+      },
     });
 
     client.activate();
@@ -70,7 +135,8 @@ export function ChatScreen() {
     };
   }, [route.params.conversationId]);
 
-  const safeDate = (d: string) => {
+  const safeDate = (d?: string) => {
+    if (!d) return new Date();
     try {
       const date = new Date(d);
       return isNaN(date.getTime()) ? new Date() : date;
@@ -79,12 +145,12 @@ export function ChatScreen() {
     }
   };
 
-  const formatTime = (d: string) => {
+  const formatTime = (d?: string) => {
     const date = safeDate(d);
     return date.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
   };
 
-  const formatDateLabel = (d: string) => {
+  const formatDateLabel = (d?: string) => {
     const date = safeDate(d);
     const now = new Date();
     if (date.toDateString() === now.toDateString()) return 'Hôm nay';
@@ -189,8 +255,8 @@ export function ChatScreen() {
 
   const renderMessage = ({ item, index }: { item: ChatMessage, index: number }) => {
     const isMe = item.senderId === user?.userId;
-    const date = safeDate(item.createdAt);
-    const prevDate = index < messages.length - 1 ? safeDate(messages[index + 1].createdAt) : null;
+    const date = safeDate(messageTimestamp(item));
+    const prevDate = index < messages.length - 1 ? safeDate(messageTimestamp(messages[index + 1])) : null;
     const showDateLabel = index === messages.length - 1 || (prevDate && prevDate.toDateString() !== date.toDateString());
 
     const fileUrl = item.fileUrl || item.attachment?.filePath;
@@ -199,7 +265,7 @@ export function ChatScreen() {
       <View>
         {showDateLabel && (
           <View style={s.dateLabelWrap}>
-            <AppText variant="caption" color="textMuted" style={s.dateLabel}>{formatDateLabel(item.createdAt)}</AppText>
+            <AppText variant="caption" color="textMuted" style={s.dateLabel}>{formatDateLabel(messageTimestamp(item))}</AppText>
           </View>
         )}
         <View style={[s.bubble, isMe ? s.bubbleMe : s.bubbleOther]}>
@@ -217,14 +283,18 @@ export function ChatScreen() {
           ) : (
             <AppText variant="bodySm" style={{ color: isMe ? colors.textPrimary : colors.textPrimary }}>{item.content}</AppText>
           )}
-          <AppText variant="caption" style={{ color: isMe ? 'rgba(0,0,0,0.5)' : colors.textMuted, marginTop: 4, alignSelf: 'flex-end' }}>{formatTime(item.createdAt)}</AppText>
+          <AppText variant="caption" style={{ color: isMe ? 'rgba(0,0,0,0.5)' : colors.textMuted, marginTop: 4, alignSelf: 'flex-end' }}>{formatTime(messageTimestamp(item))}</AppText>
         </View>
       </View>
     );
   };
 
   return (
-    <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView
+      style={s.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
+    >
       <View style={s.header}>
         <Pressable onPress={() => navigation.goBack()} style={s.headerBtn}>
           <Feather name="arrow-left" color={colors.textPrimary} size={22} />
@@ -252,19 +322,58 @@ export function ChatScreen() {
         </View>
       </Modal>
 
-      {isLoading ? (
-        <View style={s.center}><ActivityIndicator size="large" color={colors.primary} /></View>
-      ) : (
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          keyExtractor={(item, idx) => item.messageId?.toString() || idx.toString()}
-          inverted
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={s.listContent}
-          renderItem={renderMessage}
-        />
-      )}
+      <View style={s.listWrap}>
+        {isLoading ? (
+          <View style={s.center}><ActivityIndicator size="large" color={colors.primary} /></View>
+        ) : loadError && messages.length === 0 ? (
+          <View style={s.center}>
+            <AppText variant="bodySm" color="textSecondary" style={{ textAlign: 'center', paddingHorizontal: spacing.xl }}>
+              {loadError}
+            </AppText>
+            <Pressable
+              onPress={async () => {
+                setIsLoading(true);
+                setLoadError(null);
+                try {
+                  await loadInitialMessages();
+                } catch (e) {
+                  const msg = getApiErrorMessage(e, 'Không thể tải tin nhắn');
+                  setLoadError(msg);
+                  Alert.alert('Lỗi', msg);
+                } finally {
+                  setIsLoading(false);
+                }
+              }}
+              style={{ marginTop: spacing.md }}
+            >
+              <AppText variant="bodySm" color="primary">Thử lại</AppText>
+            </Pressable>
+          </View>
+        ) : (
+          <FlatList
+            ref={flatListRef}
+            style={s.list}
+            data={messages}
+            keyExtractor={(item, idx) => item.messageId?.toString() || idx.toString()}
+            inverted
+            maintainVisibleContentPosition={{ minIndexForVisible: 1 }}
+            onEndReached={() => void loadOlderMessages()}
+            onEndReachedThreshold={0.2}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
+            ListFooterComponent={
+              isLoadingOlder ? (
+                <View style={s.olderLoader}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                </View>
+              ) : null
+            }
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={s.listContent}
+            renderItem={renderMessage}
+          />
+        )}
+      </View>
 
       {isSending && (
         <View style={s.sendingIndicator}>
@@ -273,7 +382,7 @@ export function ChatScreen() {
         </View>
       )}
 
-      <View style={s.inputBar}>
+      <View style={[s.inputBar, { paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
         <Pressable style={s.attachBtn} onPress={handlePickDocument}>
           <Feather name="paperclip" color={colors.textMuted} size={20} />
         </Pressable>
@@ -314,8 +423,11 @@ const s = StyleSheet.create({
   headerBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success },
+  listWrap: { flex: 1 },
+  list: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   listContent: { padding: spacing.lg, paddingBottom: spacing.sm },
+  olderLoader: { paddingVertical: spacing.md, alignItems: 'center' },
   dateLabelWrap: { alignItems: 'center', marginVertical: spacing.lg },
   dateLabel: { backgroundColor: 'rgba(0,0,0,0.05)', paddingHorizontal: spacing.md, paddingVertical: 4, borderRadius: radius.pill },
   bubble: { maxWidth: '80%', padding: spacing.md, borderRadius: radius.lg, marginBottom: spacing.xs },
@@ -326,7 +438,7 @@ const s = StyleSheet.create({
   sendingIndicator: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingVertical: 4, backgroundColor: 'rgba(0,0,0,0.02)' },
   inputBar: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, paddingBottom: Platform.OS === 'ios' ? spacing['3xl'] : spacing.lg,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     backgroundColor: colors.surface, borderTopWidth: 1, borderColor: colors.border,
   },
   attachBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },

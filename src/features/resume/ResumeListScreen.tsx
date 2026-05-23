@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { StyleSheet, View, FlatList, ActivityIndicator, Pressable, Alert, Modal } from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -35,8 +36,15 @@ export function ResumeListScreen() {
     setShowCreateOptions(false);
     if (!user?.profileId) return;
     try {
-      await resumeService.initResume(user.profileId, { resumeName: `Hồ sơ ${resumes.length + 1}` } as any);
-      fetchResumes();
+      const created = await resumeService.initResume(user.profileId, {
+        resumeName: `Hồ sơ ${resumes.length + 1}`,
+      });
+      const newId = created?.resumeId ?? created?.id;
+      if (newId) {
+        navigation.navigate('ResumeDetail', { resumeId: Number(newId) });
+      } else {
+        await fetchResumes();
+      }
     } catch (e: any) {
       Alert.alert('Lỗi', e.message || 'Không thể tạo hồ sơ');
     }
@@ -44,12 +52,50 @@ export function ResumeListScreen() {
 
   const handleCreateAI = () => {
     setShowCreateOptions(false);
-    Alert.alert('Tính năng AI', 'Công cụ tạo CV bằng AI hiện đang được tối ưu hóa cho phiên bản Web. Vui lòng truy cập website JobsNow để trải nghiệm tốt nhất!');
+    navigation.navigate('CVBuilder');
   };
 
-  const handleUpload = () => {
+  const handleImproveCV = () => {
     setShowCreateOptions(false);
-    Alert.alert('Tải lên CV', 'Tính năng tải lên tệp tin trực tiếp từ điện thoại sẽ được cập nhật trong phiên bản tới. Hiện tại bạn có thể tạo hồ sơ trực tiếp trên app.');
+    navigation.navigate('CVImprove');
+  };
+
+  const handleUpload = async () => {
+    setShowCreateOptions(false);
+    if (!user?.profileId) return;
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets?.[0]) return;
+      const asset = result.assets[0];
+      setIsLoading(true);
+      const uploadResult = await resumeService.uploadResume(
+        user.profileId,
+        {
+          uri: asset.uri,
+          name: asset.name ?? 'CV.pdf',
+          mimeType: asset.mimeType ?? 'application/pdf',
+        },
+        asset.name?.replace(/\.[^.]+$/, '') ?? 'CV'
+      );
+      await fetchResumes();
+      if (uploadResult.parseStatus === 'SUCCESS') {
+        Alert.alert('Thành công', 'Đã tải lên và phân tích CV. Bạn có thể xem CV công khai hoặc chỉnh sửa.');
+      } else if (uploadResult.parseStatus === 'PARTIAL') {
+        Alert.alert('Đã tải lên', 'CV đã lưu nhưng một số mục chưa nhận diện đủ. Vui lòng kiểm tra lại.');
+      } else if (uploadResult.parseStatus === 'FAILED') {
+        Alert.alert('Đã tải lên', 'File đã lưu nhưng chưa phân tích được nội dung. Bạn vẫn có thể xem file PDF.');
+      } else {
+        Alert.alert('Thành công', 'Đã tải lên CV thành công.');
+      }
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Không thể tải lên CV';
+      Alert.alert('Lỗi', message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDelete = (resumeId: number) => {
@@ -163,10 +209,17 @@ export function ResumeListScreen() {
             />
             <OptionItem 
               icon="zap" 
-              title="Tạo bằng AI (Beta)" 
-              subtitle="Tự động tạo nội dung CV dựa trên vị trí mong muốn" 
+              title="Tạo CV trực tuyến" 
+              subtitle="Mở trình tạo CV trên JobsNow (WebView)" 
               onPress={handleCreateAI} 
               color={colors.accent}
+            />
+            <OptionItem 
+              icon="star" 
+              title="Chuẩn hóa CV bằng AI" 
+              subtitle="Phân tích và gợi ý cải thiện hồ sơ" 
+              onPress={handleImproveCV} 
+              color={colors.primary}
             />
             <OptionItem 
               icon="upload" 

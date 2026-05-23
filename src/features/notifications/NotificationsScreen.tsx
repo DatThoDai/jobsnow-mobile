@@ -36,11 +36,34 @@ export function NotificationsScreen() {
     }, [user])
   );
 
-  const handleMarkRead = async (id: number) => {
-    try {
-      await notificationService.markAsRead(id);
-      setNotifications((prev) => prev.map((n) => n.notificationId === id ? { ...n, isRead: true } : n));
-    } catch (e) {}
+  const handlePress = async (item: Notification) => {
+    if (!item.isRead) {
+      try {
+        await notificationService.markAsRead(item.notificationId);
+        setNotifications((prev) =>
+          prev.map((n) => (n.notificationId === item.notificationId ? { ...n, isRead: true } : n))
+        );
+      } catch {
+        // ignore
+      }
+    }
+
+    if (item.type === 'CHAT' && item.conversationId) {
+      navigation.navigate('Chat', {
+        conversationId: item.conversationId,
+        otherUserName: item.senderName || 'Tin nhắn',
+      });
+      return;
+    }
+
+    if (item.applicationId) {
+      navigation.getParent()?.navigate('Main', { screen: 'ApplicationsTab' } as never);
+      return;
+    }
+
+    if (item.jobTitle) {
+      navigation.getParent()?.navigate('Main', { screen: 'SearchTab' } as never);
+    }
   };
 
   const handleMarkAllRead = async () => {
@@ -101,7 +124,7 @@ export function NotificationsScreen() {
           renderItem={({ item }) => (
             <Pressable
               style={[styles.card, !item.isRead && styles.unreadCard]}
-              onPress={() => handleMarkRead(item.notificationId)}
+              onPress={() => handlePress(item)}
             >
               <View style={styles.cardIconWrap}>
                 <Feather name={item.jobTitle ? "briefcase" : "bell"} color={item.isRead ? colors.textMuted : colors.primary} size={20} />
