@@ -10,6 +10,12 @@ import { handbookService } from '../../services/api/handbookService';
 import { HandbookDetail } from '../../services/api/models';
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { LinearGradient } from 'expo-linear-gradient';
+import {
+  buildHandbookShareUrl,
+  openFacebookShare,
+  openLinkedInShare,
+  shareNative,
+} from '../../utils/share';
 
 type RouteProps = RouteProp<RootStackParamList, 'HandbookDetail'>;
 
@@ -70,7 +76,13 @@ export function HandbookDetailScreen() {
         <Pressable onPress={() => navigation.goBack()} style={s.backBtn}>
           <Feather name="arrow-left" color={colors.white} size={24} />
         </Pressable>
-        <Pressable style={s.backBtn}>
+        <Pressable
+          style={s.backBtn}
+          onPress={() => {
+            const url = buildHandbookShareUrl(post.slug);
+            shareNative(post.title, url);
+          }}
+        >
           <Feather name="share-2" color={colors.white} size={20} />
         </Pressable>
       </Animated.View>

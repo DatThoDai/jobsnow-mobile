@@ -14,6 +14,13 @@ import { jobService } from '../../services/api/jobService';
 import { savedJobService } from '../../services/api/savedJobService';
 import { applicationService } from '../../services/api/applicationService';
 import { useAuthStore } from '../../stores/useAuthStore';
+import {
+  buildJobShareUrl,
+  openFacebookShare,
+  openLinkedInShare,
+  shareNative,
+} from '../../utils/share';
+import { getEducationLevelLabel, getJobTypeLabelVi } from '../../constants/resumeEnums';
 
 type RouteProps = RouteProp<RootStackParamList, 'JobDetail'>;
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -154,8 +161,8 @@ export function JobDetailScreen() {
             </Pressable>
             <Pressable onPress={handleToggleSave} style={styles.headerBtn}>
               <Feather
-                name={isSaved ? 'heart' : 'heart'}
-                color={isSaved ? colors.accent : colors.white}
+                name="heart"
+                color={isSaved ? colors.danger : colors.white}
                 size={22}
               />
             </Pressable>
@@ -195,16 +202,20 @@ export function JobDetailScreen() {
       >
         <View style={styles.salaryCard}>
           <View style={styles.salaryRow}>
-            <Feather name="dollar-sign" color={colors.primary} size={20} />
-            <AppText variant="h3" color="primary">{formatSalary()}</AppText>
+            <Feather name="dollar-sign" color={colors.success} size={20} />
+            <AppText variant="h3" style={{ color: colors.success, fontWeight: '700' }}>
+              {formatSalary()}
+            </AppText>
           </View>
         </View>
 
         <View style={styles.chipRow}>
           {job.location && <InfoChip icon="map-pin" text={job.location} />}
-          {job.jobType && <InfoChip icon="briefcase" text={job.jobType} />}
+          {job.jobType && <InfoChip icon="briefcase" text={getJobTypeLabelVi(job.jobType)} />}
           {job.yearsOfExperience && <InfoChip icon="clock" text={job.yearsOfExperience} />}
-          {job.educationLevel && <InfoChip icon="award" text={job.educationLevel} />}
+          {job.educationLevel && (
+            <InfoChip icon="award" text={getEducationLevelLabel(job.educationLevel)} />
+          )}
         </View>
 
         {job.description && (
@@ -248,11 +259,50 @@ export function JobDetailScreen() {
             />
           </View>
         )}
+
+        <View style={styles.section}>
+          <View style={styles.sectionTitleRow}>
+            <Feather name="share-2" color={colors.primary} size={18} />
+            <AppText variant="h3">Chia sẻ việc làm</AppText>
+          </View>
+          <View style={styles.shareRow}>
+            <Pressable
+              style={styles.shareBtn}
+              onPress={() => openFacebookShare(buildJobShareUrl(job.jobId))}
+            >
+              <Feather name="facebook" color="#1877F2" size={22} />
+              <AppText variant="caption" style={styles.shareBtnText}>
+                Facebook
+              </AppText>
+            </Pressable>
+            <Pressable
+              style={styles.shareBtn}
+              onPress={() => openLinkedInShare(buildJobShareUrl(job.jobId))}
+            >
+              <Feather name="linkedin" color="#0A66C2" size={22} />
+              <AppText variant="caption" style={styles.shareBtnText}>
+                LinkedIn
+              </AppText>
+            </Pressable>
+            <Pressable
+              style={styles.shareBtn}
+              onPress={() => shareNative(job.title, buildJobShareUrl(job.jobId))}
+            >
+              <Feather name="share" color={colors.primaryDark} size={22} />
+              <AppText variant="caption" style={styles.shareBtnText}>
+                Khác
+              </AppText>
+            </Pressable>
+          </View>
+        </View>
       </Animated.ScrollView>
 
       <View style={styles.bottomBar}>
-        <Pressable onPress={handleToggleSave} style={styles.saveBtn}>
-          <Feather name="heart" color={isSaved ? colors.accent : colors.textMuted} size={22} />
+        <Pressable
+          onPress={handleToggleSave}
+          style={[styles.saveBtn, isSaved && styles.saveBtnActive]}
+        >
+          <Feather name="heart" color={isSaved ? colors.danger : colors.textMuted} size={22} />
         </Pressable>
         <PrimaryButton
           title={isApplying ? 'Đang gửi...' : 'Ứng tuyển ngay'}
@@ -340,10 +390,35 @@ const styles = StyleSheet.create({
     ...shadows.xl,
   },
   saveBtn: {
-    width: 52, height: 52, borderRadius: 26,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: colors.background,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  saveBtnActive: {
+    backgroundColor: '#FEE2E2',
+    borderColor: colors.danger,
   },
   applyButton: { flex: 1 },
+  shareRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  shareBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  shareBtnText: { fontWeight: '600', color: colors.textSecondary },
 });

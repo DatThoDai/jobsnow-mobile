@@ -16,6 +16,8 @@ import { Screen } from '../../components/Screen';
 import { AppText } from '../../components/AppText';
 import { Avatar } from '../../components/Avatar';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { HomeHandbookSection } from './HomeHandbookSection';
+import { HomeAIFeaturesSection } from './HomeAIFeaturesSection';
 import { colors, radius, shadows, spacing, fontFamilies } from '../../theme';
 import { useJobStore } from '../../stores/useJobStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -198,29 +200,48 @@ export function HomeScreen() {
     return 'Chào buổi tối';
   };
 
+  const goToSearchTab = () => {
+    navigation.getParent()?.navigate('Main', { screen: 'SearchTab' } as never);
+  };
+
+  const latestPreview = latestJobs.slice(0, 5);
+
   return (
     <Screen scroll>
       <Animated.View style={{ opacity: heroOpacity, transform: [{ translateY: heroTranslate }] }}>
         <View style={styles.topBar}>
-          <View style={styles.greetingCol}>
-            <AppText variant="bodySm" color="textMuted">{greeting()}</AppText>
-            <AppText variant="h2" numberOfLines={1}>{user?.fullName || 'Người dùng'} 👋</AppText>
+          <View style={styles.greetingRow}>
+            <Avatar name={user?.fullName || 'U'} uri={user?.avatar} size={44} />
+            <View style={styles.greetingCol}>
+              <AppText variant="bodySm" color="textMuted">{greeting()}</AppText>
+              <AppText variant="h3" numberOfLines={1}>{user?.fullName || 'Người dùng'}</AppText>
+            </View>
           </View>
           <Pressable onPress={() => navigation.navigate('Notifications')} style={styles.bellBtn}>
             <Feather name="bell" color={colors.textPrimary} size={20} />
           </Pressable>
         </View>
 
-        <Pressable onPress={() => navigation.navigate('Search' as any)} style={styles.searchBar}>
+        <View style={styles.editorialHero}>
+          <AppText variant="h1" style={styles.heroTitle}>
+            Tìm công việc phù hợp với nhịp sống của bạn
+          </AppText>
+        </View>
+
+        <Pressable onPress={goToSearchTab} style={styles.searchBar}>
           <Feather name="search" color={colors.textMuted} size={18} />
           <AppText variant="bodySm" color="textMuted">Tìm việc, công ty, kỹ năng...</AppText>
         </Pressable>
       </Animated.View>
 
-      <CompanySlider companies={vipCompanies} />
-
       <View style={styles.sectionHeader}>
-        <AppText variant="h3">🔥 Việc làm nổi bật</AppText>
+        <View style={styles.sectionTitleRow}>
+          <Feather name="zap" size={24} color={colors.accent} />
+          <AppText variant="h3">Việc làm nổi bật</AppText>
+        </View>
+        <Pressable onPress={goToSearchTab}>
+          <AppText variant="caption" color="primary" style={{ fontWeight: '600' }}>Xem tất cả việc</AppText>
+        </Pressable>
       </View>
 
       {isLoading ? (
@@ -239,9 +260,48 @@ export function HomeScreen() {
       )}
 
       <View style={styles.sectionHeader}>
-        <AppText variant="h3">🏆 Top Công ty nổi bật</AppText>
-        <Pressable onPress={() => {}}>
-          <AppText variant="caption" color="primary">Xem tất cả</AppText>
+        <View style={styles.sectionTitleRow}>
+          <Feather name="clock" size={18} color={colors.primary} />
+          <AppText variant="h3">Mới nhất cho bạn</AppText>
+        </View>
+      </View>
+
+      {isLoading ? (
+        <ActivityIndicator size="small" color={colors.primary} />
+      ) : latestPreview.length === 0 ? (
+        <View style={styles.emptyBox}>
+          <Feather name="inbox" color={colors.textMuted} size={40} />
+          <AppText variant="bodySm" color="textMuted">Chưa có việc làm mới</AppText>
+        </View>
+      ) : (
+        latestPreview.map((job) => (
+          <LatestJobRow
+            key={job.jobId}
+            job={job}
+            onPress={() => navigation.navigate('JobDetail', { jobId: job.jobId })}
+          />
+        ))
+      )}
+
+      <PrimaryButton
+        title="Xem tất cả việc"
+        variant="ghost"
+        onPress={goToSearchTab}
+        style={styles.viewAllJobsBtn}
+      />
+
+      <HomeHandbookSection />
+      <HomeAIFeaturesSection />
+
+      <CompanySlider companies={vipCompanies} />
+
+      <View style={styles.sectionHeader}>
+        <View style={styles.sectionTitleRow}>
+          <Feather name="award" size={18} color={colors.primary} />
+          <AppText variant="h3">Top công ty nổi bật</AppText>
+        </View>
+        <Pressable onPress={() => navigation.navigate('CompanyListing')}>
+          <AppText variant="caption" color="primary" style={{ fontWeight: '600' }}>Xem tất cả</AppText>
         </Pressable>
       </View>
 
@@ -282,26 +342,6 @@ export function HomeScreen() {
           );
         })}
       </View>
-
-      <View style={styles.sectionHeader}>
-        <AppText variant="h3">⚡ Mới nhất cho bạn</AppText>
-        <Pressable onPress={fetchHomeJobs}>
-          <AppText variant="caption" color="primary">Làm mới</AppText>
-        </Pressable>
-      </View>
-
-      {isLoading ? (
-        <ActivityIndicator size="small" color={colors.primary} />
-      ) : latestJobs.length === 0 ? (
-        <View style={styles.emptyBox}>
-          <Feather name="inbox" color={colors.textMuted} size={40} />
-          <AppText variant="bodySm" color="textMuted">Chưa có việc làm mới</AppText>
-        </View>
-      ) : (
-        latestJobs.map((job) => (
-          <LatestJobRow key={job.jobId} job={job} onPress={() => navigation.navigate('JobDetail', { jobId: job.jobId })} />
-        ))
-      )}
     </Screen>
   );
 }
@@ -313,7 +353,35 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.lg,
   },
+  greetingRow: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
   greetingCol: { flex: 1, gap: 2 },
+  editorialHero: {
+    marginBottom: spacing.lg,
+    maxWidth: 340,
+  },
+  heroTitle: {
+    fontSize: 20,
+    lineHeight: 25,
+    marginBottom: spacing.sm,
+  },
+  heroSub: {
+    lineHeight: 22,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+  },
+  viewAllJobsBtn: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+  },
   bellBtn: {
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center',

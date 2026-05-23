@@ -1,5 +1,6 @@
 import { apiClient } from './client';
-import { BaseResponse, Conversation, ChatMessage } from './models';
+import { BaseResponse, Conversation, ChatMessage, ChatMessagesPage } from './models';
+import { CHAT_MESSAGE_PAGE_SIZE, parseChatMessagesPage } from '../../utils/chatMessage';
 
 export const chatService = {
   getConversations: async (userId: number): Promise<Conversation[]> => {
@@ -10,6 +11,22 @@ export const chatService = {
   getMessages: async (conversationId: number): Promise<ChatMessage[]> => {
     const response = await apiClient.get<any, BaseResponse<ChatMessage[]>>(`/chat/messages/${conversationId}`);
     return response.data;
+  },
+
+  getMessagesPage: async (
+    conversationId: number,
+    beforeMessageId?: number,
+    limit: number = CHAT_MESSAGE_PAGE_SIZE,
+  ): Promise<ChatMessagesPage> => {
+    const params: Record<string, number> = { limit };
+    if (beforeMessageId != null) {
+      params.beforeMessageId = beforeMessageId;
+    }
+    const response = await apiClient.get<any, BaseResponse<ChatMessagesPage>>(
+      `/chat/messages/${conversationId}`,
+      { params },
+    );
+    return parseChatMessagesPage(response.data);
   },
 
   getUnreadCount: async (userId: number): Promise<number> => {

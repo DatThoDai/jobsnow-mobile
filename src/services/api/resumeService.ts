@@ -4,10 +4,22 @@ import { BaseResponse, Resume } from './models';
 export const resumeService = {
   getResumesByProfile: async (profileId: number): Promise<Resume[]> => {
     const response = await apiClient.get<any, BaseResponse<Resume[]>>(`/resume/profile/${profileId}`);
-    return response.data;
+    const list = response.data ?? [];
+    return list.map((item: Record<string, unknown>) => ({
+      resumeId: Number(item.resumeId),
+      title: String(item.resumeName ?? item.title ?? 'CV'),
+      resumeName: item.resumeName as string | undefined,
+      summary: item.summary as string | undefined,
+      isPrimary: Boolean(item.isPrimary),
+      fileUrl: (item.resumeUrl ?? item.fileUrl) as string | undefined,
+      resumeUrl: item.resumeUrl as string | undefined,
+      hasParsedCv: Boolean(item.hasParsedCv),
+      templateKey: item.templateKey as string | undefined,
+      createdAt: item.uploadedAt as string | undefined,
+    }));
   },
 
-  initResume: async (profileId: number, data: { title: string }): Promise<any> => {
+  initResume: async (profileId: number, data: { resumeName: string; templateKey?: string }): Promise<any> => {
     const response = await apiClient.post<any, BaseResponse<any>>(`/resume/init/${profileId}`, data);
     return response.data;
   },
@@ -35,6 +47,14 @@ export const resumeService = {
     return response.data;
   },
 
+  updateEducation: async (resumeId: number, id: number, data: any): Promise<any> => {
+    const response = await apiClient.put<any, BaseResponse<any>>(
+      `/resume/${resumeId}/educations/${id}`,
+      data
+    );
+    return response.data;
+  },
+
   deleteEducation: async (resumeId: number, id: number): Promise<void> => {
     await apiClient.delete(`/resume/${resumeId}/educations/${id}`);
   },
@@ -46,6 +66,14 @@ export const resumeService = {
 
   addWorkExperience: async (resumeId: number, data: any): Promise<any> => {
     const response = await apiClient.post<any, BaseResponse<any>>(`/resume/${resumeId}/work-experiences`, data);
+    return response.data;
+  },
+
+  updateWorkExperience: async (resumeId: number, id: number, data: any): Promise<any> => {
+    const response = await apiClient.put<any, BaseResponse<any>>(
+      `/resume/${resumeId}/work-experiences/${id}`,
+      data
+    );
     return response.data;
   },
 
@@ -63,6 +91,14 @@ export const resumeService = {
     return response.data;
   },
 
+  updateProject: async (resumeId: number, id: number, data: any): Promise<any> => {
+    const response = await apiClient.put<any, BaseResponse<any>>(
+      `/resume/${resumeId}/projects/${id}`,
+      data
+    );
+    return response.data;
+  },
+
   deleteProject: async (resumeId: number, id: number): Promise<void> => {
     await apiClient.delete(`/resume/${resumeId}/projects/${id}`);
   },
@@ -74,6 +110,14 @@ export const resumeService = {
 
   addCertificate: async (resumeId: number, data: any): Promise<any> => {
     const response = await apiClient.post<any, BaseResponse<any>>(`/resume/${resumeId}/certificates`, data);
+    return response.data;
+  },
+
+  updateCertificate: async (resumeId: number, id: number, data: any): Promise<any> => {
+    const response = await apiClient.put<any, BaseResponse<any>>(
+      `/resume/${resumeId}/certificates/${id}`,
+      data
+    );
     return response.data;
   },
 
@@ -93,5 +137,26 @@ export const resumeService = {
 
   removeSkill: async (resumeId: number, skillId: number): Promise<void> => {
     await apiClient.delete(`/resume/${resumeId}/skills/${skillId}`);
+  },
+
+  uploadResume: async (
+    profileId: number,
+    file: { uri: string; name: string; mimeType?: string },
+    resumeName?: string
+  ): Promise<{ parseStatus?: string; parseWarnings?: string[] }> => {
+    const formData = new FormData();
+    formData.append('resumeName', resumeName ?? file.name ?? 'CV');
+    formData.append('resume', {
+      uri: file.uri,
+      name: file.name,
+      type: file.mimeType ?? 'application/pdf',
+    } as unknown as Blob);
+    const response = await apiClient.post<any, BaseResponse<{
+      parseStatus?: string;
+      parseWarnings?: string[];
+    }>>(`/resume/create/${profileId}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data ?? {};
   },
 };

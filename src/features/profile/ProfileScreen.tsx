@@ -13,6 +13,7 @@ import { profileService } from '../../services/api/profileService';
 import { notificationService } from '../../services/api/notificationService';
 import { JobSeekerProfile } from '../../services/api/models';
 import { RootStackParamList } from '../../navigation/RootNavigator';
+import { resolveMediaUrl } from '../../utils/media';
 
 export function ProfileScreen() {
   const { user, logout } = useAuthStore();
@@ -63,7 +64,11 @@ export function ProfileScreen() {
     <Screen scroll useGradient={false}>
       <LinearGradient colors={[colors.primarySoft, colors.primary]} style={styles.profileCard}>
         <View style={styles.avatarWrap}>
-          <Avatar name={profile?.fullName || user?.fullName || 'U'} />
+          <Avatar
+            name={profile?.fullName || user?.fullName || 'U'}
+            uri={resolveMediaUrl(profile?.avatar || user?.avatar)}
+            size={72}
+          />
         </View>
         <AppText variant="h2" color="textPrimary" style={styles.userName}>
           {profile?.fullName || user?.fullName || 'Người dùng'}
@@ -93,14 +98,25 @@ export function ProfileScreen() {
         <AppText variant="caption" color="textMuted" style={styles.menuLabel}>TÀI KHOẢN</AppText>
         <MenuItem icon="user" label="Chỉnh sửa hồ sơ" onPress={() => navigation.navigate('EditProfile')} />
         <MenuItem icon="file-text" label="Hồ sơ xin việc" onPress={() => navigation.navigate('ResumeList')} />
+        <MenuItem icon="layout" label="Bảng điều khiển" onPress={() => navigation.navigate('Dashboard')} />
+        <MenuItem icon="credit-card" label="Gói dịch vụ" onPress={() => navigation.navigate('Pricing')} />
         <MenuItem icon="bell" label="Thông báo" badge={unreadCount > 0 ? unreadCount : undefined} onPress={() => navigation.navigate('Notifications')} />
+        {profile?.profileId ? (
+          <MenuItem
+            icon="eye"
+            label="Xem CV công khai"
+            subtitle="Hồ sơ chính trên web"
+            onPress={() => navigation.navigate('PublicCVPreview', { profileId: profile.profileId })}
+          />
+        ) : null}
       </View>
 
       <View style={styles.menuSection}>
         <AppText variant="caption" color="textMuted" style={styles.menuLabel}>KHÁM PHÁ</AppText>
         <MenuItem icon="book-open" label="Cẩm nang nghề nghiệp" onPress={() => navigation.navigate('Handbook')} />
         <MenuItem icon="message-circle" label="Tin nhắn" onPress={() => navigation.navigate('ChatList')} />
-        <MenuItem icon="settings" label="Cài đặt" />
+        <MenuItem icon="heart" label="Công ty đang theo dõi" onPress={() => navigation.navigate('FollowedCompanies')} />
+        <MenuItem icon="settings" label="Cài đặt" onPress={() => navigation.navigate('Settings')} />
       </View>
 
       <Pressable style={styles.logoutButton} onPress={handleLogout}>
@@ -111,14 +127,33 @@ export function ProfileScreen() {
   );
 }
 
-function MenuItem({ icon, label, badge, onPress }: { icon: string; label: string; badge?: number; onPress?: () => void }) {
+function MenuItem({
+  icon,
+  label,
+  subtitle,
+  badge,
+  onPress,
+}: {
+  icon: string;
+  label: string;
+  subtitle?: string;
+  badge?: number;
+  onPress?: () => void;
+}) {
   return (
     <Pressable style={styles.menuItem} onPress={onPress}>
       <View style={styles.menuItemLeft}>
         <View style={styles.menuIconCircle}>
           <Feather name={icon as any} color={colors.primary} size={18} />
         </View>
-        <AppText variant="body">{label}</AppText>
+        <View>
+          <AppText variant="body">{label}</AppText>
+          {subtitle ? (
+            <AppText variant="caption" color="textMuted">
+              {subtitle}
+            </AppText>
+          ) : null}
+        </View>
       </View>
       <View style={styles.menuItemRight}>
         {badge !== undefined && (

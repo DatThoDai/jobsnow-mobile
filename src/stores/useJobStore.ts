@@ -25,8 +25,7 @@ export const useJobStore = create<JobState>((set) => ({
         jobService.getAllJobs(),
       ]);
 
-      // Assuming we take top 10 latest jobs
-      const slicedLatest = latestResponse.slice(0, 10);
+      const slicedLatest = latestResponse.slice(0, 5);
 
       set({
         featuredJobs: hotResponse,
