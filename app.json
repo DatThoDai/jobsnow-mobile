@@ -31,7 +31,7 @@
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "apiBaseUrl": "http://192.168.1.34:8082",
+      "apiBaseUrl": "https://jobsnow.onrender.com",
       "publicSiteUrl": "https://jobsnow.id.vn",
       "googleAndroidClientId": "845327823984-1n5aasoni0f5etr1bpaevi8ikdhugblf.apps.googleusercontent.com",
       "googleWebClientId": "845327823984-6vib4okamlkhbncnmt2oa8rftq7cmb32.apps.googleusercontent.com",
