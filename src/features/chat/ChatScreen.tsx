@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppText } from '../../components/AppText';
 import { Avatar } from '../../components/Avatar';
-import { colors, radius, spacing, fontFamilies, shadows } from '../../theme';
+import { colors, radius, spacing, fontFamilies, shadows, zIndex } from '../../theme';
 import { chatService } from '../../services/api/chatService';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { ChatMessage } from '../../services/api/models';
@@ -420,7 +420,9 @@ const s = StyleSheet.create({
     backgroundColor: colors.surface, borderBottomWidth: 1, borderColor: colors.border,
     ...shadows.sm,
   },
-  headerBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
+  headerBtn: {
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader, width: 36, height: 36, borderRadius: 18, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
   statusRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   onlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success },
   listWrap: { flex: 1 },

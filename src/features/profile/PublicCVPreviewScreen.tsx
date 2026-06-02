@@ -12,13 +12,20 @@ import { Feather } from '@expo/vector-icons';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppText } from '../../components/AppText';
-import { colors, radius, spacing } from '../../theme';
+import {colors, radius, spacing, zIndex } from '../../theme';
+
 import { API_BASE_URL, PUBLIC_SITE_URL } from '../../config/env';
 import { profileService } from '../../services/api/profileService';
 import { resumeService } from '../../services/api/resumeService';
 import { authStorage } from '../../services/authStorage';
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import type { Resume } from '../../services/api/models';
+import {
+  downloadPdfToDevice,
+  safePdfFilename,
+} from '../../utils/savePdfToDevice';
+import { CV_EXPORT_HTML_INJECT, printHtmlToPdfAndSave } from '../../utils/exportCvPdf';
+import { getApiErrorMessage } from '../../utils/apiError';
 
 type ViewMode = 'web' | 'pdf';
 
@@ -134,6 +141,9 @@ export function PublicCVPreviewScreen() {
   const [viewMode, setViewMode] = useState<ViewMode>('web');
   const [webError, setWebError] = useState(false);
   const [webReady, setWebReady] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const exportPendingRef = useRef(false);
+  const exportTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fileUrl = targetResume?.fileUrl || targetResume?.resumeUrl;
   const absoluteFileUrl = fileUrl ? toAbsoluteUrl(String(fileUrl)) : null;
@@ -190,18 +200,66 @@ export function PublicCVPreviewScreen() {
 
   useEffect(() => () => clearLayoutRetries(), [clearLayoutRetries]);
 
+  const finishExport = useCallback(() => {
+    exportPendingRef.current = false;
+    if (exportTimeoutRef.current) {
+      clearTimeout(exportTimeoutRef.current);
+      exportTimeoutRef.current = null;
+    }
+    setExporting(false);
+  }, []);
+
+  const cvDownloadFilename = useCallback(() => {
+    const name =
+      targetResume?.resumeName ||
+      targetResume?.title ||
+      profileName ||
+      'CV';
+    return safePdfFilename(String(name));
+  }, [profileName, targetResume]);
+
+  const runTemplatePdfExport = useCallback(
+    async (html: string) => {
+      try {
+        const { message } = await printHtmlToPdfAndSave(html, cvDownloadFilename());
+        Alert.alert('Đã tải CV', message);
+      } catch (e) {
+        Alert.alert('Lỗi', getApiErrorMessage(e, 'Không thể tạo file PDF.'));
+      } finally {
+        finishExport();
+      }
+    },
+    [cvDownloadFilename, finishExport]
+  );
+
   const handleWebViewMessage = useCallback(
     (event: { nativeEvent: { data: string } }) => {
       try {
-        const payload = JSON.parse(event.nativeEvent.data) as { type?: string };
+        const payload = JSON.parse(event.nativeEvent.data) as {
+          type?: string;
+          html?: string;
+          message?: string;
+        };
         if (payload.type === 'cv-ready') {
           applyMobileLayout();
+          return;
+        }
+        if (payload.type === 'cv-export-html' && typeof payload.html === 'string') {
+          void runTemplatePdfExport(payload.html);
+          return;
+        }
+        if (payload.type === 'cv-export-error' && exportPendingRef.current) {
+          finishExport();
+          Alert.alert(
+            'Lỗi',
+            payload.message || 'Không thể xuất PDF. Hãy đợi CV tải xong rồi thử lại.'
+          );
         }
       } catch {
         // ignore non-JSON messages
       }
     },
-    [applyMobileLayout]
+    [applyMobileLayout, finishExport, runTemplatePdfExport]
   );
 
   const openInBrowser = () => {
@@ -209,31 +267,52 @@ export function PublicCVPreviewScreen() {
     Linking.openURL(url).catch(() => {});
   };
 
-  const openFileExternal = () => {
+  const downloadFilePdf = useCallback(async () => {
     if (!absoluteFileUrl) return;
-    Linking.openURL(absoluteFileUrl).catch(() => {
-      Alert.alert('Lỗi', 'Không thể mở file CV. Vui lòng thử lại.');
-    });
-  };
+    setExporting(true);
+    try {
+      const session = token ? { token } : await authStorage.getSession();
+      const authHeader = session?.token ? { Authorization: `Bearer ${session.token}` } : undefined;
+      const { message } = await downloadPdfToDevice(
+        absoluteFileUrl,
+        cvDownloadFilename(),
+        authHeader
+      );
+      Alert.alert('Đã tải CV', message);
+    } catch (e) {
+      Alert.alert('Lỗi', getApiErrorMessage(e, 'Không thể tải file PDF.'));
+    } finally {
+      setExporting(false);
+    }
+  }, [absoluteFileUrl, cvDownloadFilename, token]);
+
+  const exportTemplatePdf = useCallback(() => {
+    if (!webReady) {
+      Alert.alert('Đang tải', 'Vui lòng đợi CV hiển thị xong rồi thử lại.');
+      return;
+    }
+    exportPendingRef.current = true;
+    setExporting(true);
+    if (exportTimeoutRef.current) clearTimeout(exportTimeoutRef.current);
+    webViewRef.current?.injectJavaScript(CV_EXPORT_HTML_INJECT);
+    exportTimeoutRef.current = setTimeout(() => {
+      if (!exportPendingRef.current) return;
+      finishExport();
+      Alert.alert('Lỗi', 'Không thể xuất PDF. Vui lòng thử lại.');
+    }, 15000);
+  }, [finishExport, webReady]);
 
   const handlePrimaryAction = () => {
-    if (viewMode === 'pdf') {
-      openFileExternal();
+    if (exporting) return;
+    if (viewMode === 'pdf' || (absoluteFileUrl && !hasParsedCv)) {
+      void downloadFilePdf();
       return;
     }
-    if (absoluteFileUrl && !hasParsedCv) {
-      openFileExternal();
-      return;
-    }
-    Alert.alert(
-      'Tải PDF',
-      'CV tạo trên hệ thống sẽ mở trong trình duyệt để bạn tải PDF.',
-      [
-        { text: 'Hủy', style: 'cancel' },
-        { text: 'Mở trình duyệt', onPress: openInBrowser },
-      ]
-    );
+    exportTemplatePdf();
   };
+
+  const primaryActionReady = viewMode === 'pdf' ? Boolean(absoluteFileUrl) : webReady;
+  const primaryActionLabel = 'Tải PDF';
 
   const webSourceUri = viewMode === 'pdf' && absoluteFileUrl ? absoluteFileUrl : cvUrl;
 
@@ -338,7 +417,7 @@ export function PublicCVPreviewScreen() {
             viewMode === 'web' ? MOBILE_VIEWPORT_INJECT(token) : undefined
           }
           injectedJavaScript={viewMode === 'web' ? MOBILE_CV_LAYOUT_INJECT : undefined}
-          onMessage={viewMode === 'web' ? handleWebViewMessage : undefined}
+          onMessage={handleWebViewMessage}
           onLoadEnd={() => {
             setWebReady(true);
             if (viewMode === 'web') {
@@ -363,24 +442,23 @@ export function PublicCVPreviewScreen() {
       {!loading && !webError ? (
         <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.md }]}>
           <Pressable
-            style={[styles.downloadBtn, !webReady && styles.downloadBtnDisabled]}
+            style={[
+              styles.downloadBtn,
+              (!primaryActionReady || exporting) && styles.downloadBtnDisabled,
+            ]}
             onPress={handlePrimaryAction}
-            disabled={!webReady}
+            disabled={!primaryActionReady || exporting}
             hitSlop={4}
             accessibilityRole="button"
-            accessibilityLabel={viewMode === 'pdf' ? 'Mở file PDF' : 'Tải PDF'}
+            accessibilityLabel={primaryActionLabel}
           >
-            <Feather
-              name={viewMode === 'pdf' ? 'file' : 'download'}
-              color={colors.white}
-              size={20}
-            />
+            {exporting ? (
+              <ActivityIndicator color={colors.white} size="small" />
+            ) : (
+              <Feather name="download" color={colors.white} size={20} />
+            )}
             <AppText variant="body" style={styles.downloadBtnText}>
-              {viewMode === 'pdf'
-                ? 'Mở file PDF'
-                : absoluteFileUrl && !hasParsedCv
-                  ? 'Mở file CV'
-                  : 'Tải PDF'}
+              {exporting ? 'Đang xử lý…' : primaryActionLabel}
             </AppText>
           </Pressable>
         </View>
@@ -403,6 +481,8 @@ const styles = StyleSheet.create({
   },
   headerText: { flex: 1, minWidth: 0 },
   iconBtn: {
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader,
     width: 40,
     height: 40,
     borderRadius: 20,

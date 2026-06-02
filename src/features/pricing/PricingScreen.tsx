@@ -14,7 +14,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppText } from '../../components/AppText';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { colors, radius, shadows, spacing } from '../../theme';
+import {colors, radius, shadows, spacing, zIndex } from '../../theme';
+
 import {
   subscriptionService,
   SubscriptionPlan,
@@ -153,6 +154,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   header: { paddingTop: 50, paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
   backBtn: {
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader,
     width: 40,
     height: 40,
     borderRadius: 20,

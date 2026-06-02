@@ -18,7 +18,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Screen } from '../../components/Screen';
 import { AppText } from '../../components/AppText';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { colors, radius, spacing, fontFamilies } from '../../theme';
+import {colors, radius, spacing, fontFamilies, zIndex } from '../../theme';
+
 import { useAuthStore } from '../../stores/useAuthStore';
 import { PUBLIC_SITE_URL } from '../../config/env';
 import { RootStackParamList } from '../../navigation/RootNavigator';
@@ -175,6 +176,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   backBtn: {
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader,
     width: 40,
     height: 40,
     borderRadius: 20,

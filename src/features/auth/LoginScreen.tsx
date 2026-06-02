@@ -7,7 +7,8 @@ import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppText } from '../../components/AppText';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { colors, radius, shadows, spacing, fontFamilies } from '../../theme';
+import {colors, radius, shadows, spacing, fontFamilies, zIndex } from '../../theme';
+
 import { useAuthStore } from '../../stores/useAuthStore';
 import { authService } from '../../services/api/authService';
 import type { AuthStackParamList } from '../../navigation/AuthStack';
@@ -240,6 +241,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing['3xl'],
   },
   backBtn: {
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader,
     width: 44, height: 44, borderRadius: 22,
     backgroundColor: colors.surface,
     alignItems: 'center', justifyContent: 'center',

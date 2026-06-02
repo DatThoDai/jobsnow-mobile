@@ -17,7 +17,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { AppText } from '../../components/AppText';
 import { PrimaryButton } from '../../components/PrimaryButton';
 import { FormField } from '../../components/FormField';
-import { colors, radius, spacing, shadows } from '../../theme';
+import {colors, radius, spacing, shadows, zIndex } from '../../theme';
+
 import { resumeService } from '../../services/api/resumeService';
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { ResumeSectionTabs, ResumeSectionTabKey } from '../../components/resume/ResumeSectionTabs';
@@ -416,6 +417,8 @@ const styles = StyleSheet.create({
   header: { paddingTop: 50, paddingBottom: spacing.lg, paddingHorizontal: spacing.lg },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerBtn: {
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader,
     width: 40,
     height: 40,
     borderRadius: 20,

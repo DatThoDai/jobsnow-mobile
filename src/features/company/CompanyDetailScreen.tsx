@@ -7,6 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Screen } from '../../components/Screen';
 import { AppText } from '../../components/AppText';
 import { PrimaryButton } from '../../components/PrimaryButton';
+import { ScreenOverlayHeader } from '../../components/ScreenOverlayHeader';
 import { colors, radius, shadows, spacing } from '../../theme';
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import { Company, CompanyReview, Job } from '../../services/api/models';
@@ -342,11 +343,7 @@ export function CompanyDetailScreen() {
         </Animated.View>
       </Animated.View>
 
-      <View style={styles.backOverlay} pointerEvents="box-none">
-        <Pressable onPress={() => navigation.goBack()} style={styles.headerBtn}>
-          <Feather name="arrow-left" color={colors.white} size={22} />
-        </Pressable>
-      </View>
+      <ScreenOverlayHeader onBack={() => navigation.goBack()} />
 
       <Modal visible={reviewModalVisible} transparent animationType="slide">
         <KeyboardAvoidingView
@@ -459,24 +456,6 @@ const styles = StyleSheet.create({
     right: 0,
     overflow: 'hidden',
     elevation: 4,
-  },
-  backOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 200,
-    elevation: 12,
-    paddingTop: 50,
-    paddingHorizontal: spacing.lg,
-  },
-  headerBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   scrollContent: { paddingBottom: 80, paddingHorizontal: spacing.lg },
   infoCard: {

@@ -5,7 +5,8 @@ import { useRoute, useNavigation, RouteProp, useFocusEffect } from '@react-navig
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppText } from '../../components/AppText';
-import { colors, radius, shadows, spacing } from '../../theme';
+import {colors, radius, shadows, spacing, zIndex } from '../../theme';
+
 import { resumeService } from '../../services/api/resumeService';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { RootStackParamList } from '../../navigation/RootNavigator';
@@ -205,22 +206,33 @@ export function ResumeDetailScreen() {
           </View>
         )}
 
-        {user?.profileId ? (
+        <View style={s.actionRow}>
           <Pressable
-            style={s.previewBtn}
-            onPress={() =>
-              navigation.navigate('PublicCVPreview', {
-                profileId: user.profileId!,
-                resumeId,
-              })
-            }
+            style={s.improveBtn}
+            onPress={() => navigation.navigate('CVImprove', { resumeId, autoRun: true })}
           >
-            <Feather name="eye" size={16} color={colors.primaryDark} />
-            <AppText variant="bodySm" style={{ color: colors.primaryDark, fontWeight: '600' }}>
-              Xem CV công khai
+            <Feather name="zap" size={16} color={colors.primary} />
+            <AppText variant="bodySm" color="primary" style={{ fontWeight: '600' }}>
+              Chuẩn hóa CV bằng AI
             </AppText>
           </Pressable>
-        ) : null}
+          {user?.profileId ? (
+            <Pressable
+              style={s.previewBtn}
+              onPress={() =>
+                navigation.navigate('PublicCVPreview', {
+                  profileId: user.profileId!,
+                  resumeId,
+                })
+              }
+            >
+              <Feather name="eye" size={16} color={colors.primaryDark} />
+              <AppText variant="bodySm" style={{ color: colors.primaryDark, fontWeight: '600' }}>
+                Xem CV công khai
+              </AppText>
+            </Pressable>
+          ) : null}
+        </View>
       </ScrollView>
     </View>
   );
@@ -259,13 +271,19 @@ const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background },
   headerGradient: {
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader,
     paddingTop: 50,
     paddingBottom: spacing.md,
     paddingHorizontal: spacing.lg,
   },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  headerRow: {
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   headerTitleWrap: { flex: 1 },
   headerBtn: {
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader,
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -308,12 +326,23 @@ const s = StyleSheet.create({
     borderRadius: radius.pill,
   },
   emptyPdf: { alignItems: 'center', paddingVertical: spacing.xl },
+  actionRow: { gap: spacing.sm, marginTop: spacing.md },
+  improveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    padding: spacing.md,
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.primary + '40',
+  },
   previewBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    marginTop: spacing.md,
     padding: spacing.md,
     backgroundColor: colors.surface,
     borderRadius: radius.lg,

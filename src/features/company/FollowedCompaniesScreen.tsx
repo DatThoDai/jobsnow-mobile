@@ -5,7 +5,8 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Screen } from '../../components/Screen';
 import { AppText } from '../../components/AppText';
-import { colors, radius, spacing } from '../../theme';
+import {colors, radius, spacing, zIndex } from '../../theme';
+
 import { companyService, FollowedCompanyItem } from '../../services/api/companyService';
 import { RootStackParamList } from '../../navigation/RootNavigator';
 
@@ -99,6 +100,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   backBtn: {
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader,
     width: 40,
     height: 40,
     borderRadius: 20,

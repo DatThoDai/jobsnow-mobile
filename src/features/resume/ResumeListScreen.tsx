@@ -1,15 +1,16 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { StyleSheet, View, FlatList, ActivityIndicator, Pressable, Alert, Modal } from 'react-native';
-import * as DocumentPicker from 'expo-document-picker';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppText } from '../../components/AppText';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { colors, radius, shadows, spacing } from '../../theme';
+import { colors, radius, shadows, spacing, zIndex } from '../../theme';
+
 import { resumeService } from '../../services/api/resumeService';
 import { useAuthStore } from '../../stores/useAuthStore';
+import { useResumeCreation } from '../../hooks/useResumeCreation';
 import { RootStackParamList } from '../../navigation/RootNavigator';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -31,71 +32,17 @@ export function ResumeListScreen() {
   useFocusEffect(useCallback(() => { fetchResumes(); }, [fetchResumes]));
 
   const [showCreateOptions, setShowCreateOptions] = useState(false);
+  const { createManual, uploadFile, openImprove, openAiGenerate } = useResumeCreation(
+    user?.profileId,
+    resumes.length
+  );
 
-  const handleCreateManual = async () => {
+  const wrapUpload = async () => {
     setShowCreateOptions(false);
-    if (!user?.profileId) return;
-    try {
-      const created = await resumeService.initResume(user.profileId, {
-        resumeName: `Hồ sơ ${resumes.length + 1}`,
-      });
-      const newId = created?.resumeId ?? created?.id;
-      if (newId) {
-        navigation.navigate('ResumeDetail', { resumeId: Number(newId) });
-      } else {
-        await fetchResumes();
-      }
-    } catch (e: any) {
-      Alert.alert('Lỗi', e.message || 'Không thể tạo hồ sơ');
-    }
-  };
-
-  const handleCreateAI = () => {
-    setShowCreateOptions(false);
-    navigation.navigate('CVBuilder');
-  };
-
-  const handleImproveCV = () => {
-    setShowCreateOptions(false);
-    navigation.navigate('CVImprove');
-  };
-
-  const handleUpload = async () => {
-    setShowCreateOptions(false);
-    if (!user?.profileId) return;
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-        copyToCacheDirectory: true,
-      });
-      if (result.canceled || !result.assets?.[0]) return;
-      const asset = result.assets[0];
-      setIsLoading(true);
-      const uploadResult = await resumeService.uploadResume(
-        user.profileId,
-        {
-          uri: asset.uri,
-          name: asset.name ?? 'CV.pdf',
-          mimeType: asset.mimeType ?? 'application/pdf',
-        },
-        asset.name?.replace(/\.[^.]+$/, '') ?? 'CV'
-      );
-      await fetchResumes();
-      if (uploadResult.parseStatus === 'SUCCESS') {
-        Alert.alert('Thành công', 'Đã tải lên và phân tích CV. Bạn có thể xem CV công khai hoặc chỉnh sửa.');
-      } else if (uploadResult.parseStatus === 'PARTIAL') {
-        Alert.alert('Đã tải lên', 'CV đã lưu nhưng một số mục chưa nhận diện đủ. Vui lòng kiểm tra lại.');
-      } else if (uploadResult.parseStatus === 'FAILED') {
-        Alert.alert('Đã tải lên', 'File đã lưu nhưng chưa phân tích được nội dung. Bạn vẫn có thể xem file PDF.');
-      } else {
-        Alert.alert('Thành công', 'Đã tải lên CV thành công.');
-      }
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : 'Không thể tải lên CV';
-      Alert.alert('Lỗi', message);
-    } finally {
-      setIsLoading(false);
-    }
+    setIsLoading(true);
+    await uploadFile();
+    await fetchResumes();
+    setIsLoading(false);
   };
 
   const handleDelete = (resumeId: number) => {
@@ -176,6 +123,15 @@ export function ResumeListScreen() {
               </View>
 
               <View style={styles.cardBottom}>
+                <Pressable
+                  onPress={() => openImprove(item.resumeId)}
+                  style={styles.improveBtn}
+                >
+                  <Feather name="zap" color={colors.primary} size={14} />
+                  <AppText variant="caption" color="primary" style={{ fontWeight: '600' }}>
+                    Chuẩn hóa AI
+                  </AppText>
+                </Pressable>
                 {item.isPrimary ? (
                   <View style={styles.primaryBadge}>
                     <Feather name="star" color={colors.accent} size={14} style={{ fill: colors.accent }} />
@@ -202,30 +158,30 @@ export function ResumeListScreen() {
           </View>
           <View style={styles.optionsBody}>
             <OptionItem 
-              icon="edit-3" 
-              title="Tạo thủ công" 
-              subtitle="Nhập thông tin từng bước để tạo CV chuẩn" 
-              onPress={handleCreateManual} 
+              icon="zap" 
+              title="Viết CV bằng AI" 
+              subtitle="AI soạn nội dung và lưu vào hồ sơ" 
+              onPress={() => { setShowCreateOptions(false); openAiGenerate(); }} 
+              color={colors.accent}
             />
             <OptionItem 
-              icon="zap" 
-              title="Tạo CV trực tuyến" 
-              subtitle="Mở trình tạo CV trên JobsNow (WebView)" 
-              onPress={handleCreateAI} 
-              color={colors.accent}
+              icon="edit-3" 
+              title="Tạo thủ công" 
+              subtitle="Nhập học vấn, kinh nghiệm từng mục" 
+              onPress={() => { setShowCreateOptions(false); createManual(); }} 
+            />
+            <OptionItem 
+              icon="upload" 
+              title="Tải lên tệp tin" 
+              subtitle="PDF hoặc Word từ máy của bạn" 
+              onPress={wrapUpload} 
             />
             <OptionItem 
               icon="star" 
               title="Chuẩn hóa CV bằng AI" 
               subtitle="Phân tích và gợi ý cải thiện hồ sơ" 
-              onPress={handleImproveCV} 
+              onPress={() => { setShowCreateOptions(false); openImprove(); }} 
               color={colors.primary}
-            />
-            <OptionItem 
-              icon="upload" 
-              title="Tải lên tệp tin" 
-              subtitle="Sử dụng file PDF hoặc Word có sẵn từ máy" 
-              onPress={handleUpload} 
             />
           </View>
         </View>
@@ -252,12 +208,20 @@ function OptionItem({ icon, title, subtitle, onPress, color = colors.primary }: 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   headerGradient: {
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader,
     paddingTop: 50, paddingBottom: spacing.xl, paddingHorizontal: spacing.lg,
     borderBottomLeftRadius: radius['3xl'], borderBottomRightRadius: radius['3xl'],
   },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },
-  headerBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
-  addBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center', ...shadows.sm },
+  headerRow: {
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.md },
+  headerBtn: {
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader, width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
+  addBtn: {
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader, width: 36, height: 36, borderRadius: 18, backgroundColor: colors.white, alignItems: 'center', justifyContent: 'center', ...shadows.sm },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
   listContent: { padding: spacing.lg },
   card: {
@@ -268,7 +232,18 @@ const styles = StyleSheet.create({
   cardIcon: { width: 50, height: 50, borderRadius: radius.lg, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border },
   cardContent: { flex: 1 },
   deleteBtn: { padding: spacing.sm },
-  cardBottom: { marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, borderColor: colors.border, flexDirection: 'row', justifyContent: 'flex-end' },
+  cardBottom: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderColor: colors.border,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  improveBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   primaryBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.accent + '15', paddingHorizontal: spacing.md, paddingVertical: 4, borderRadius: radius.pill },
   setPrimaryBtn: { paddingHorizontal: spacing.md, paddingVertical: 4 },
   emptyIconWrap: { width: 100, height: 100, borderRadius: 50, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center' },

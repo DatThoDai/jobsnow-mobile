@@ -5,7 +5,8 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppText } from '../../components/AppText';
 import { Avatar } from '../../components/Avatar';
-import { colors, radius, shadows, spacing } from '../../theme';
+import {colors, radius, shadows, spacing, zIndex } from '../../theme';
+
 import { chatService } from '../../services/api/chatService';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { Conversation } from '../../services/api/models';
@@ -102,7 +103,9 @@ const s = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingTop: spacing['3xl'], paddingBottom: spacing.md,
     backgroundColor: colors.surface, borderBottomWidth: 1, borderColor: colors.border,
   },
-  headerBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
+  headerBtn: {
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader, width: 40, height: 40, borderRadius: 20, backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: spacing['3xl'] },
   listContent: { padding: spacing.lg, paddingBottom: spacing['3xl'] },
   card: {

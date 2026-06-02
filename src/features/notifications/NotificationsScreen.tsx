@@ -5,7 +5,8 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppText } from '../../components/AppText';
-import { colors, radius, shadows, spacing } from '../../theme';
+import {colors, radius, shadows, spacing, zIndex } from '../../theme';
+
 import { notificationService } from '../../services/api/notificationService';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { Notification } from '../../services/api/models';
@@ -146,17 +147,25 @@ export function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   headerGradient: {
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader,
     paddingTop: 50, paddingBottom: spacing.xl, paddingHorizontal: spacing.lg,
   },
   headerRow: {
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     marginBottom: spacing.sm,
   },
   headerBtn: {
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader,
     width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.15)',
     alignItems: 'center', justifyContent: 'center',
   },
   markAllBtn: {
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader,
     width: 40, height: 40, borderRadius: 20,
     alignItems: 'center', justifyContent: 'center',
   },

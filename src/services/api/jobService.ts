@@ -92,6 +92,13 @@ export const jobService = {
     return response.data;
   },
 
+  getRelatedJobs: async (jobId: number, limit = 8): Promise<Job[]> => {
+    const response = await apiClient.get<any, BaseResponse<Job[]>>(
+      `/job/${jobId}/related?limit=${limit}`
+    );
+    return response.data ?? [];
+  },
+
   searchJobs: async (params: JobSearchParams | string): Promise<Job[]> => {
     const searchParams: JobSearchParams =
       typeof params === 'string' ? { keyword: params } : params;
