@@ -1,7 +1,6 @@
 import * as Print from 'expo-print';
-import * as Sharing from 'expo-sharing';
-import { Alert } from 'react-native';
 import { PUBLIC_SITE_URL } from '../config/env';
+import { saveLocalPdfToDevice, type SavePdfResult } from './savePdfToDevice';
 
 /** Injected into public CV WebView to capture styled HTML for native PDF export. */
 export const CV_EXPORT_HTML_INJECT = `
@@ -28,7 +27,10 @@ export const CV_EXPORT_HTML_INJECT = `
 true;
 `;
 
-export async function printHtmlToPdfAndShare(html: string, dialogTitle = 'Lưu hoặc chia sẻ CV'): Promise<void> {
+export async function printHtmlToPdfAndSave(
+  html: string,
+  filename: string
+): Promise<SavePdfResult> {
   const { uri } = await Print.printToFileAsync({
     html,
     baseUrl: PUBLIC_SITE_URL.replace(/\/+$/, '/'),
@@ -36,15 +38,5 @@ export async function printHtmlToPdfAndShare(html: string, dialogTitle = 'Lưu h
     height: 842,
   });
 
-  const canShare = await Sharing.isAvailableAsync();
-  if (!canShare) {
-    Alert.alert('Đã tạo PDF', `File đã lưu tại:\n${uri}`);
-    return;
-  }
-
-  await Sharing.shareAsync(uri, {
-    mimeType: 'application/pdf',
-    UTI: 'com.adobe.pdf',
-    dialogTitle,
-  });
+  return saveLocalPdfToDevice(uri, filename);
 }

@@ -20,8 +20,11 @@ import { resumeService } from '../../services/api/resumeService';
 import { authStorage } from '../../services/authStorage';
 import { RootStackParamList } from '../../navigation/RootNavigator';
 import type { Resume } from '../../services/api/models';
-import { downloadAndSharePdf, safePdfFilename } from '../../utils/downloadAndShareFile';
-import { CV_EXPORT_HTML_INJECT, printHtmlToPdfAndShare } from '../../utils/exportCvPdf';
+import {
+  downloadPdfToDevice,
+  safePdfFilename,
+} from '../../utils/savePdfToDevice';
+import { CV_EXPORT_HTML_INJECT, printHtmlToPdfAndSave } from '../../utils/exportCvPdf';
 import { getApiErrorMessage } from '../../utils/apiError';
 
 type ViewMode = 'web' | 'pdf';
@@ -206,17 +209,27 @@ export function PublicCVPreviewScreen() {
     setExporting(false);
   }, []);
 
+  const cvDownloadFilename = useCallback(() => {
+    const name =
+      targetResume?.resumeName ||
+      targetResume?.title ||
+      profileName ||
+      'CV';
+    return safePdfFilename(String(name));
+  }, [profileName, targetResume]);
+
   const runTemplatePdfExport = useCallback(
     async (html: string) => {
       try {
-        await printHtmlToPdfAndShare(html);
+        const { message } = await printHtmlToPdfAndSave(html, cvDownloadFilename());
+        Alert.alert('Đã tải CV', message);
       } catch (e) {
         Alert.alert('Lỗi', getApiErrorMessage(e, 'Không thể tạo file PDF.'));
       } finally {
         finishExport();
       }
     },
-    [finishExport]
+    [cvDownloadFilename, finishExport]
   );
 
   const handleWebViewMessage = useCallback(
@@ -260,22 +273,18 @@ export function PublicCVPreviewScreen() {
     try {
       const session = token ? { token } : await authStorage.getSession();
       const authHeader = session?.token ? { Authorization: `Bearer ${session.token}` } : undefined;
-      const name =
-        targetResume?.resumeName ||
-        targetResume?.title ||
-        profileName ||
-        'CV';
-      await downloadAndSharePdf(
+      const { message } = await downloadPdfToDevice(
         absoluteFileUrl,
-        safePdfFilename(String(name)),
+        cvDownloadFilename(),
         authHeader
       );
+      Alert.alert('Đã tải CV', message);
     } catch (e) {
       Alert.alert('Lỗi', getApiErrorMessage(e, 'Không thể tải file PDF.'));
     } finally {
       setExporting(false);
     }
-  }, [absoluteFileUrl, profileName, targetResume, token]);
+  }, [absoluteFileUrl, cvDownloadFilename, token]);
 
   const exportTemplatePdf = useCallback(() => {
     if (!webReady) {
