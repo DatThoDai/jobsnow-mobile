@@ -12,7 +12,8 @@ import { useRoute, useNavigation, RouteProp, useFocusEffect } from '@react-navig
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppText } from '../../components/AppText';
-import { colors, radius, shadows, spacing } from '../../theme';
+import {colors, radius, shadows, spacing, zIndex } from '../../theme';
+
 import { handbookService } from '../../services/api/handbookService';
 import { HandbookPost } from '../../services/api/models';
 import { RootStackParamList } from '../../navigation/RootNavigator';
@@ -130,7 +131,9 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: radius['2xl'],
     borderBottomRightRadius: radius['2xl'],
   },
-  backBtn: { marginBottom: spacing.md, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  backBtn: {
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader, marginBottom: spacing.md, width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
   list: { padding: spacing.lg, paddingBottom: spacing['3xl'] },
   card: {

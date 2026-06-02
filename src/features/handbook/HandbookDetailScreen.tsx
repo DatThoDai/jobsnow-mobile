@@ -5,6 +5,7 @@ import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import RenderHtml from 'react-native-render-html';
 import { AppText } from '../../components/AppText';
+import { ScreenOverlayHeader, HeaderOverlayButton } from '../../components/ScreenOverlayHeader';
 import { colors, radius, shadows, spacing } from '../../theme';
 import { handbookService } from '../../services/api/handbookService';
 import { HandbookDetail } from '../../services/api/models';
@@ -72,20 +73,16 @@ export function HandbookDetailScreen() {
 
   return (
     <View style={s.container}>
-      <Animated.View style={[s.header, { transform: [{ translateY: headerTranslate }] }]}>
-        <Pressable onPress={() => navigation.goBack()} style={s.backBtn}>
-          <Feather name="arrow-left" color={colors.white} size={24} />
-        </Pressable>
-        <Pressable
-          style={s.backBtn}
-          onPress={() => {
-            const url = buildHandbookShareUrl(post.slug);
-            shareNative(post.title, url);
-          }}
-        >
-          <Feather name="share-2" color={colors.white} size={20} />
-        </Pressable>
-      </Animated.View>
+      <ScreenOverlayHeader
+        onBack={() => navigation.goBack()}
+        right={
+          <HeaderOverlayButton
+            onPress={() => shareNative(post.title, buildHandbookShareUrl(post.slug))}
+          >
+            <Feather name="share-2" color={colors.white} size={20} />
+          </HeaderOverlayButton>
+        }
+      />
 
       <Animated.ScrollView
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
@@ -156,15 +153,6 @@ export function HandbookDetailScreen() {
 const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  header: {
-    position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
-    flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.lg,
-    paddingTop: 50, paddingBottom: 10,
-  },
-  backBtn: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(0,0,0,0.3)',
-    alignItems: 'center', justifyContent: 'center',
-  },
   imageContainer: { height: 350, width: '100%', position: 'relative' },
   image: { width: '100%', height: '100%' },
   imageOverlay: { ...StyleSheet.absoluteFillObject },

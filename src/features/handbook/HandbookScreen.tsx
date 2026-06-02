@@ -16,7 +16,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AppText } from '../../components/AppText';
-import { colors, radius, shadows, spacing } from '../../theme';
+import { colors, radius, shadows, spacing, zIndex } from '../../theme';
 import { handbookService } from '../../services/api/handbookService';
 import { HandbookPost } from '../../services/api/models';
 import { RootStackParamList } from '../../navigation/RootNavigator';
@@ -258,7 +258,8 @@ const s = StyleSheet.create({
     borderBottomLeftRadius: 25,
     borderBottomRightRadius: 25,
     overflow: 'hidden',
-    zIndex: 10,
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader,
   },
   headerTop: {
     flexDirection: 'row',
@@ -266,7 +267,9 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 15,
   },
-  iconBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  iconBtn: {
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader, width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   searchBox: {
     flexDirection: 'row',
     alignItems: 'center',

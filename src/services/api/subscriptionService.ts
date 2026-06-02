@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import { BaseResponse } from './models';
+import { unwrapApiData } from '../../utils/apiResponse';
 
 export interface SubscriptionPlan {
   planId: number;
@@ -25,21 +25,20 @@ export interface CandidateSubscriptionStatus {
 
 export const subscriptionService = {
   getCandidatePlans: async (): Promise<SubscriptionPlan[]> => {
-    const response = await apiClient.get<any, BaseResponse<SubscriptionPlan[]>>('/plans', {
+    const response = await apiClient.get('/plans', {
       params: { scope: 'CANDIDATE_SUBSCRIPTION' },
     });
-    return response.data ?? [];
+    return unwrapApiData<SubscriptionPlan[]>(response) ?? [];
   },
 
   getCandidateSubscriptionStatus: async (): Promise<CandidateSubscriptionStatus> => {
-    const response = await apiClient.get<any, BaseResponse<CandidateSubscriptionStatus>>(
-      '/payment/candidate/subscription-status'
-    );
-    return response.data;
+    const response = await apiClient.get('/payment/candidate/subscription-status');
+    return unwrapApiData<CandidateSubscriptionStatus>(response);
   },
 
   createPaymentUrl: async (planId: number): Promise<string> => {
-    const response = await apiClient.post<any, BaseResponse<{ paymentUrl: string }>>('/payment/create', { planId });
-    return response.data?.paymentUrl ?? '';
+    const response = await apiClient.post('/payment/create', { planId });
+    const data = unwrapApiData<{ paymentUrl: string }>(response);
+    return data?.paymentUrl ?? '';
   },
 };

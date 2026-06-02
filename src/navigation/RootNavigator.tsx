@@ -14,7 +14,9 @@ import { ResumeListScreen } from '../features/resume/ResumeListScreen';
 import { ResumeDetailScreen } from '../features/resume/ResumeDetailScreen';
 import { ResumeEditScreen } from '../features/resume/ResumeEditScreen';
 import { CVImproveScreen } from '../features/resume/CVImproveScreen';
-import { CVBuilderWebViewScreen } from '../features/resume/CVBuilderWebViewScreen';
+import { CVCreateHubScreen } from '../features/resume/CVCreateHubScreen';
+import { CVGenerateAIScreen } from '../features/resume/CVGenerateAIScreen';
+import { ManualCVCreateScreen } from '../features/resume/ManualCVCreateScreen';
 import { HandbookScreen } from '../features/handbook/HandbookScreen';
 import { HandbookDetailScreen } from '../features/handbook/HandbookDetailScreen';
 import { HandbookCategoryScreen } from '../features/handbook/HandbookCategoryScreen';
@@ -39,8 +41,10 @@ export type RootStackParamList = {
   ResumeList: undefined;
   ResumeDetail: { resumeId: number };
   ResumeEdit: { resumeId: number };
-  CVImprove: undefined;
+  CVImprove: { resumeId?: number; autoRun?: boolean } | undefined;
   CVBuilder: undefined;
+  CVGenerateAI: undefined;
+  ManualCVCreate: undefined;
   Handbook: undefined;
   HandbookDetail: { slug: string };
   HandbookCategory: { categoryKey: string };
@@ -85,7 +89,9 @@ export function RootNavigator() {
           <Stack.Screen name="ResumeDetail" component={ResumeDetailScreen} />
           <Stack.Screen name="ResumeEdit" component={ResumeEditScreen} />
           <Stack.Screen name="CVImprove" component={CVImproveScreen} />
-          <Stack.Screen name="CVBuilder" component={CVBuilderWebViewScreen} />
+          <Stack.Screen name="CVBuilder" component={CVCreateHubScreen} />
+          <Stack.Screen name="CVGenerateAI" component={CVGenerateAIScreen} />
+          <Stack.Screen name="ManualCVCreate" component={ManualCVCreateScreen} />
           <Stack.Screen name="Handbook" component={HandbookScreen} />
           <Stack.Screen name="HandbookDetail" component={HandbookDetailScreen} />
           <Stack.Screen name="HandbookCategory" component={HandbookCategoryScreen} />

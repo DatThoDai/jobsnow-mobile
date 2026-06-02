@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import { BaseResponse } from './models';
+import { unwrapApiData } from '../../utils/apiResponse';
 
 export interface ImproveCVRequest {
   cvText?: string;
@@ -30,6 +30,21 @@ export interface JobMatchRequest {
   resumeId?: number;
 }
 
+export interface JobMatchResponse {
+  overallScore: number;
+  skillMatchScore: number;
+  experienceMatchScore: number;
+  educationMatchScore: number;
+  ruleBasedScore: number;
+  aiSemanticScore: number;
+  aiFeedback: string;
+  matchedSkills: string[];
+  missingSkills: string[];
+  recommendations: string[];
+  jobTitle: string;
+  companyName: string;
+}
+
 export interface JobMatchItem {
   id: number;
   jobId: number;
@@ -49,13 +64,40 @@ export interface GenerateCVRequest {
   language?: string;
 }
 
+export interface GenerateCVExperience {
+  company: string;
+  title: string;
+  duration: string;
+  bullets: string[];
+}
+
+export interface GenerateCVEducation {
+  school: string;
+  degree: string;
+  major: string;
+  duration: string;
+}
+
+export interface GenerateCVProject {
+  name: string;
+  description: string;
+  duration: string;
+}
+
+export interface GenerateCVResponse {
+  summary: string;
+  experiences: GenerateCVExperience[];
+  educations: GenerateCVEducation[];
+  skillsSection: string;
+  certifications: string[];
+  projects: GenerateCVProject[];
+  suggestedTemplateKey?: string;
+}
+
 export const aiService = {
   improveCVFromText: async (request: ImproveCVRequest): Promise<ImproveCVResponse> => {
-    const response = await apiClient.post<any, BaseResponse<ImproveCVResponse>>(
-      '/api/ai/improve-cv',
-      request
-    );
-    return response.data;
+    const response = await apiClient.post('/api/ai/improve-cv', request);
+    return unwrapApiData<ImproveCVResponse>(response);
   },
 
   improveCVFromFile: async (
@@ -69,29 +111,30 @@ export const aiService = {
       type: file.mimeType ?? 'application/pdf',
     } as unknown as Blob);
     formData.append('language', language);
-    const response = await apiClient.post<any, BaseResponse<ImproveCVResponse>>(
-      '/api/ai/improve-cv/upload',
-      formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } }
-    );
-    return response.data;
+    const response = await apiClient.post('/api/ai/improve-cv/upload', formData);
+    return unwrapApiData<ImproveCVResponse>(response);
   },
 
-  generateCV: async (request: GenerateCVRequest): Promise<unknown> => {
-    const response = await apiClient.post<any, BaseResponse<unknown>>('/api/ai/generate-cv', request);
-    return response.data;
+  generateCV: async (request: GenerateCVRequest): Promise<GenerateCVResponse> => {
+    const response = await apiClient.post('/api/ai/generate-cv', request);
+    return unwrapApiData<GenerateCVResponse>(response);
   },
 
-  calculateJobMatch: async (request: JobMatchRequest): Promise<unknown> => {
-    const response = await apiClient.post<any, BaseResponse<unknown>>('/api/ai/job-match', request);
-    return response.data;
+  calculateJobMatch: async (request: JobMatchRequest): Promise<JobMatchResponse> => {
+    const response = await apiClient.post('/api/ai/job-match', request);
+    const data = unwrapApiData<JobMatchResponse>(response);
+    return {
+      ...data,
+      matchedSkills: data.matchedSkills ?? [],
+      missingSkills: data.missingSkills ?? [],
+      recommendations: data.recommendations ?? [],
+      aiFeedback: data.aiFeedback ?? '',
+    };
   },
 
   getMyMatches: async (profileId: number): Promise<JobMatchItem[]> => {
-    const response = await apiClient.get<any, BaseResponse<JobMatchItem[]>>(
-      `/api/ai/job-match/my-matches/${profileId}`
-    );
-    return response.data ?? [];
+    const response = await apiClient.get(`/api/ai/job-match/my-matches/${profileId}`);
+    return unwrapApiData<JobMatchItem[]>(response) ?? [];
   },
 
   recalculateForProfile: async (profileId: number): Promise<void> => {

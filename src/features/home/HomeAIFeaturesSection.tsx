@@ -20,13 +20,13 @@ const FEATURES = [
     icon: 'file-text' as const,
     title: 'Chuẩn hóa CV',
     description: 'Nhận góp ý chi tiết để CV nổi bật hơn với nhà tuyển dụng.',
-    route: 'ResumeList' as const,
+    route: 'CVImprove' as const,
   },
   {
     icon: 'edit-3' as const,
-    title: 'Tạo & quản lý hồ sơ',
-    description: 'Xây dựng CV trực tuyến và cập nhật hồ sơ ứng tuyển.',
-    route: 'ResumeList' as const,
+    title: 'Tạo CV',
+    description: 'AI, thủ công hoặc tải file — tạo hồ sơ ngay trên app.',
+    route: 'CVBuilder' as const,
   },
 ];
 

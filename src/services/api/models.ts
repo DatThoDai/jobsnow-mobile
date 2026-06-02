@@ -19,6 +19,25 @@ export interface AuthResponse {
   profileId?: number;
 }
 
+export interface JobSkill {
+  skillId?: number;
+  skillName?: string;
+  level?: string;
+  isRequired?: boolean;
+}
+
+export interface JobMajor {
+  majorId?: number;
+  name?: string;
+}
+
+export interface JobSocial {
+  id?: number;
+  platform?: string;
+  url?: string;
+  logoUrl?: string;
+}
+
 export interface Job {
   jobId: number;
   title: string;
@@ -29,17 +48,35 @@ export interface Job {
   location: string;
   salaryMin?: number;
   salaryMax?: number;
+  salaryType?: string;
   salaryCurrency?: string;
   hotTag?: string;
   isExpired: boolean;
+  isActive?: boolean;
+  isApproved?: boolean;
+  isDeleted?: boolean;
   postedAt: string;
+  deadline?: string;
   description?: string;
   requirements?: string;
   benefits?: string;
   companyAddress?: string;
+  contactPersonName?: string;
+  contactTutorial?: string;
+  companySocials?: JobSocial[];
   jobType?: string;
   yearsOfExperience?: string;
   educationLevel?: string;
+  categoryId?: number;
+  categoryName?: string;
+  applicationLanguage?: string;
+  genderRequirement?: string;
+  minAge?: number;
+  maxAge?: number;
+  jobSkills?: JobSkill[];
+  majors?: JobMajor[];
+  viewCount?: number;
+  applyCount?: number;
 }
 
 export interface BaseResponse<T> {
@@ -122,6 +159,9 @@ export interface Company {
   website?: string;
   companySize?: string;
   industry?: string;
+  nameUserContact?: string;
+  tutorialApply?: string;
+  socials?: JobSocial[];
   followerCount?: number;
   images?: { imageUrl: string; imageType: string }[];
 }

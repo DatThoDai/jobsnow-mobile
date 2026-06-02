@@ -17,7 +17,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Screen } from '../../components/Screen';
 import { AppText } from '../../components/AppText';
 import { PrimaryButton } from '../../components/PrimaryButton';
-import { colors, radius, spacing, fontFamilies } from '../../theme';
+import { HeaderOverlayButton } from '../../components/ScreenOverlayHeader';
+import { colors, radius, spacing, fontFamilies, zIndex } from '../../theme';
 import { profileService } from '../../services/api/profileService';
 import { skillService, Skill } from '../../services/api/skillService';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -157,9 +158,9 @@ export function EditProfileScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}
       >
         <View style={styles.header}>
-          <Pressable onPress={() => navigation.goBack()}>
+          <HeaderOverlayButton onPress={() => navigation.goBack()} variant="light">
             <Feather name="arrow-left" color={colors.textPrimary} size={24} />
-          </Pressable>
+          </HeaderOverlayButton>
           <AppText variant="h2" style={styles.headerTitle}>
             Chỉnh sửa hồ sơ
           </AppText>
@@ -289,6 +290,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: spacing.md,
     marginBottom: spacing.sm,
+    zIndex: zIndex.overlayHeader,
+    elevation: zIndex.overlayHeader,
   },
   headerTitle: { fontSize: 20 },
   scrollContent: { paddingBottom: 100 },
